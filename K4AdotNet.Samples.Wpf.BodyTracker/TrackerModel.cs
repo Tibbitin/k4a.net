@@ -19,6 +19,8 @@ namespace K4AdotNet.Samples.Wpf.BodyTracker
         // To visualize skeletons
         private readonly SkeletonVisualizer depthSkeletonVisualizer;
         private readonly SkeletonVisualizer colorSkeletonVisualizer;
+
+        private readonly DataFilter dataFilter;
         // To transform body index map from depth camera to color camera
         private readonly BodyIndexMapTransformation bodyIndexMapTransformation;
 
@@ -52,6 +54,7 @@ namespace K4AdotNet.Samples.Wpf.BodyTracker
             var depthMode = readingLoop.DepthMode;
             depthImageVisualizer = ImageVisualizer.CreateForDepth(dispatcher, depthMode.WidthPixels(), depthMode.HeightPixels());
             depthSkeletonVisualizer = new SkeletonVisualizer(dispatcher, depthMode.WidthPixels(), depthMode.HeightPixels(), ProjectJointToDepthMap);
+            dataFilter = new DataFilter(ProjectJointToDepthMap);
 
             // Image and skeleton visualizers for color
             var colorRes = readingLoop.ColorResolution;
@@ -89,6 +92,8 @@ namespace K4AdotNet.Samples.Wpf.BodyTracker
         private void ReadingLoop_CaptureReady(object sender, CaptureReadyEventArgs e)
             => trackingLoop.Enqueue(e.Capture);
 
+        int blackoutOperationExecutionRate = 1;
+        int bodyFrameExecutions = 0;
         private void TrackingLoop_BodyFrameReady(object sender, BodyFrameReadyEventArgs e)
         {
             if (actualFps.RegisterFrame())
@@ -96,6 +101,7 @@ namespace K4AdotNet.Samples.Wpf.BodyTracker
 
             depthSkeletonVisualizer?.Update(e.BodyFrame);
             colorSkeletonVisualizer?.Update(e.BodyFrame);
+            //dataFilter?.Update(e.BodyFrame);
 
             using (var capture = e.BodyFrame.Capture)
             {
@@ -104,14 +110,24 @@ namespace K4AdotNet.Samples.Wpf.BodyTracker
                     using (var indexMap = e.BodyFrame.BodyIndexMap)
                     {
                         depthImageVisualizer?.Update(depthImage, indexMap);
+                        if((bodyFrameExecutions) % blackoutOperationExecutionRate == 0)
+                        {
+                            
+
+                            depth dep = new depth();
+                            dataFilter.WriteFilteredDataToDiskRaw(dep.Blackout(depthImage, dataFilter?.GetROI(depthImage, e.BodyFrame)));
+                        }
 
                         if (colorImageVisualizer != null)
                         {
+                           
                             using (var colorImage = capture.ColorImage)
                             {
                                 using (var transformedBodyIndexMap = bodyIndexMapTransformation.ToColor(depthImage, indexMap))
                                 {
+                                    
                                     colorImageVisualizer.Update(colorImage, transformedBodyIndexMap);
+                                    
                                 }
                             }
                         }
@@ -119,6 +135,7 @@ namespace K4AdotNet.Samples.Wpf.BodyTracker
                     }
                 }
             }
+            bodyFrameExecutions++;
         }
 
         public void Dispose()
