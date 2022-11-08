@@ -35,25 +35,27 @@ namespace K4AdotNet.Samples.Wpf.BodyTracker
             }
 
             //640 x 576
-            Console.WriteLine($"ROI elements:\nx: {roi[0].x}\ny: {roi[0].y}");
+            Console.WriteLine($"ROI elements:\nx: {roi[0].x}\ny: {roi[0].y}\nw: {roi[0].w}\nh: {roi[0].h}");
             return byteArray;
         }
         public int checkInRoi(int p_x, int p_y, ROI[] roi)
         {
-            int x = roi[0].x;
-            int y = roi[0].y;
-            int w = roi[0].w;
-            int h = roi[0].h;
-
-            if (p_x >= x && p_x <= (x + w))
+            for(int i = 0; i < roi.Length; i++)
             {
-                if (p_y >= y && p_y <= (y + h))
+                int x = roi[i].x;
+                int y = roi[i].y;
+                int w = roi[i].w;
+                int h = roi[i].h;
+
+                if (p_x >= x && p_x <= (x + w))
                 {
-                    return 1;
+                    if (p_y >= y && p_y <= (y + h))
+                    {
+                        return 1;
+                    }
                 }
             }
             return 0;
-
         }
     }
 }
